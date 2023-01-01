@@ -45,8 +45,10 @@ def generate_level(level):
     new_player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
-            if level[y][x] == '#':
-                Tile('wall', x, y)
+            if level[y][x] == '!':
+                Tile('land1', x, y)
+            elif level[y][x] == '#':
+                Tile('land2', x, y)
     return new_player, x, y
 
 
@@ -88,23 +90,32 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         self.x = 50
         self.y = 521
-        self.img_norm = load_image('shooter_walk_norm.png')
-        self.img_flip = pygame.transform.flip(load_image('shooter_walk_flip.png'), True, False)
-        self.stay_norm = load_image('shooter_stay.png')
-        self.stay_flip = pygame.transform.flip(load_image('shooter_stay.png'), True, False)
+        self.img_norm = load_image('shooter\shooter_walk_norm.png')
+        self.img_flip = pygame.transform.flip(load_image('shooter\shooter_walk_flip.png'), True, False)
+        self.stay_norm = load_image('shooter\shooter_stay.png')
+        self.stay_flip = pygame.transform.flip(load_image('shooter\shooter_stay.png'), True, False)
+        self.sit_norm = load_image('shooter\shooter_sit.png')
+        self.sit_flip = pygame.transform.flip(load_image('shooter\shooter_sit.png'), True, False)
+        self.fire_norm = load_image('shooter\shooter_walk_fire_norm.png')
+        self.fire_flip = pygame.transform.flip(load_image('shooter\shooter_walk_fire_flip.png'), True, False)
+        self.fire_stay_norm = load_image('shooter\shooter_stay_fire.png')
+        self.fire_stay_flip = pygame.transform.flip(load_image('shooter\shooter_stay_fire.png'), True, False)
+        self.sit_fire_norm = load_image('shooter\shooter_sit_fire.png')
+        self.sit_fire_flip = pygame.transform.flip(load_image('shooter\shooter_sit_fire.png'), True, False)
         self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
         self.dx = 5
         self.flag = True
+        self.direction_move = 1
+        self.direction = 1
+        self.fire = 0
 
-    def move(self, direction):
-        if self.flag and direction == 3:
-            self.flag = False
-            all_sprites.remove(self.walk)
-            self.walk = AnimatedSprite(self.img_flip, 10, 1, self.x, self.y)
-        elif self.flag == False and direction == 1:
-            self.flag = True
-            all_sprites.remove(self.walk)
-            self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
+    def move(self, direction=1, fire=0):
+        if direction == 1 or direction == 3:
+            self.direction_move = direction
+        if self.direction != direction or self.fire != fire:
+            self.fire = fire
+            self.update_img(direction)
+            self.direction = direction
         if direction == 1:
             if self.x < 750:
                 self.x += self.dx
@@ -112,7 +123,20 @@ class Player(pygame.sprite.Sprite):
         elif direction == 3:
             if self.x > 0:
                 self.x -= self.dx
+                if fire == 0:
+                    self.walk.update(self.x, self.y)
+                if self.fire == 1:
+                    self.walk.update(self.x - 14, self.y)
+        elif direction == 7:
+            if fire == 0 or (fire == 1 and self.direction_move == 1):
+                self.walk.update(self.x, self.y + 16)
+            elif fire == 1 and self.direction_move == 3:
+                self.walk.update(self.x - 11, self.y + 16)
+        elif direction == 0:
+            if fire == 0 or (fire == 1 and self.direction_move == 1):
                 self.walk.update(self.x, self.y)
+            elif fire == 1 and self.direction_move == 3:
+                self.walk.update(self.x - 14, self.y)
         if self.x <= 0:
             all_sprites.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
@@ -120,13 +144,52 @@ class Player(pygame.sprite.Sprite):
             all_sprites.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
 
+    def update_img(self, direction):
+        if direction == 3:
+            all_sprites.remove(self.walk)
+            if self.fire == 0:
+                self.walk = AnimatedSprite(self.img_flip, 10, 1, self.x, self.y)
+            elif self.fire == 1:
+                self.walk = AnimatedSprite(self.fire_flip, 10, 1, self.x - 14, self.y)
+        elif direction == 1:
+            all_sprites.remove(self.walk)
+            if self.fire == 0:
+                self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
+            elif self.fire == 1:
+                self.walk = AnimatedSprite(self.fire_norm, 10, 1, self.x, self.y)
+        elif direction == 7:
+            all_sprites.remove(self.walk)
+            if self.direction_move == 1:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.sit_norm, 1, 1, self.x, self.y + 16)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.sit_fire_norm, 1, 1, self.x, self.y + 16)
+            elif self.direction_move == 3:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.sit_flip, 1, 1, self.x, self.y + 16)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.sit_fire_flip, 1, 1, self.x - 11, self.y + 16)
+        elif direction == 0:
+            all_sprites.remove(self.walk)
+            if self.direction_move == 1:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
+            elif self.direction_move == 3:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
+
 
 lev_map = load_level('map.txt')
 pygame.init()
-pygame.display.set_caption('Перемещение героя')
+pygame.display.set_caption('Bloody snow')
 screen = pygame.display.set_mode(size)
 tile_images = {
-    'wall': load_image('land.png'),
+    'land1': load_image('land1.png'),
+    'land2': load_image('land2.png')
 }
 tile_width = tile_height = 25
 player, level_x, level_y = generate_level(lev_map)
@@ -135,11 +198,29 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_buttons = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
     if keys[pygame.K_d]:
-        shooter.move(1)
+        if mouse_buttons[0]:
+            shooter.move(1, 1)
+        elif not mouse_buttons[0]:
+            shooter.move(1, 0)
     elif keys[pygame.K_a]:
-        shooter.move(3)
+        if mouse_buttons[0]:
+            shooter.move(3, 1)
+        elif not mouse_buttons[0]:
+            shooter.move(3, 0)
+    elif keys[pygame.K_LCTRL]:
+        if mouse_buttons[0]:
+            shooter.move(7, 1)
+        elif not mouse_buttons[0]:
+            shooter.move(7, 0)
+
+    elif (not keys[pygame.K_d] or keys[pygame.K_a]) and mouse_buttons[0]:
+        shooter.move(0, 1)
+    elif not keys[pygame.K_d] or not keys[pygame.K_a] or not keys[pygame.K_LCTRL]:
+        shooter.move(0)
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     pygame.display.update()
