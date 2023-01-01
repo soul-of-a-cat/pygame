@@ -115,24 +115,25 @@ class Player(pygame.sprite.Sprite):
         self.direction = 1
         self.fire = 0
         self.jump_y = self.y
+        self.jump = 0
+        self.max_jump = False
 
     def move(self, direction=1, fire=0, jump=0):
         if direction == 1 or direction == 3:
             self.direction_move = direction
-        if self.direction != direction or self.fire != fire:
+        if self.direction != direction or self.fire != fire or self.jump != jump:
             self.fire = fire
+            self.jump = jump
             self.update_img(direction)
             self.direction = direction
         if jump == 1 and not self.flag:
             self.flag = True
         if direction == 1:
-            if self.x < width - 50 and \
-                    (lev_map[(self.y + 54) // tile_width - 1]
-                     [(self.x + 35) // tile_width] == '.'):
+            if self.x < width - 50 and lev_map[(self.y + 54) // tile_height - 1][(self.x + 50) // tile_width] == '.':
                 self.x += self.dx
                 self.walk.update(self.x, self.y)
         elif direction == 3:
-            if self.x > 0:
+            if self.x > 0 and lev_map[(self.y + 54) // tile_height - 1][self.x // tile_width] == '.':
                 self.x -= self.dx
                 if fire == 0:
                     self.walk.update(self.x, self.y)
@@ -149,14 +150,20 @@ class Player(pygame.sprite.Sprite):
             elif fire == 1 and self.direction_move == 3:
                 self.walk.update(self.x - 14, self.y)
         if self.flag:
-            if self.y - self.jump_y < 25:
-                self.jump_y -= self.dy
-            elif self.y - self.jump_y >= 25:
-                self.jump_y += self.dy
-            self.walk.update(self.x, self.jump_y)
-            if lev_map[self.walk.rect.bottom // tile_width - 1][self.walk.rect.bottom // tile_width] != '.':
-                self.y = self.jump_y
+            if self.jump_y - self.y < 50 and not self.max_jump:
+                self.y -= self.dy
+            elif self.jump_y - self.y >= 50 or self.max_jump:
+                self.max_jump = True
+                self.y += self.dy
+            self.walk.update(self.x, self.y)
+            if self.direction_move == 3:
+                x = (self.x + 10)
+            elif self.direction_move == 1:
+                x = (self.x + 35)
+            if lev_map[(self.y + 54) // tile_height][x // tile_width] != '.':
+                self.jump_y = self.y
                 self.flag = False
+                self.max_jump = False
         if self.x <= 0:
             all_sprites.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
@@ -201,7 +208,7 @@ class Player(pygame.sprite.Sprite):
                     self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
                 elif self.fire == 1:
                     self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
-        elif direction == 5:
+        elif self.jump:
             all_sprites.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
@@ -247,15 +254,15 @@ while True:
             shooter.move(7, 1)
         elif not mouse_buttons[0]:
             shooter.move(7, 0)
-    elif keys[pygame.K_SPACE]:
-        if mouse_buttons[0]:
-            shooter.move(0, 1, 1)
-        elif not mouse_buttons[0]:
-            shooter.move(0, 0, 1)
     elif (not keys[pygame.K_d] or keys[pygame.K_a]) and mouse_buttons[0]:
         shooter.move(0, 1)
     elif not keys[pygame.K_d] or not keys[pygame.K_a] or not keys[pygame.K_LCTRL]:
         shooter.move(0)
+    if keys[pygame.K_SPACE]:
+        if mouse_buttons[0]:
+            shooter.move(0, 1, 1)
+        elif not mouse_buttons[0]:
+            shooter.move(0, 0, 1)
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     pygame.display.update()
