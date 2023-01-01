@@ -42,14 +42,19 @@ def load_level(filename):
 
 
 def generate_level(level):
-    new_player, x, y = None, None, None
+    player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '!':
                 Tile('land1', x, y)
             elif level[y][x] == '#':
                 Tile('land2', x, y)
-    return new_player, x, y
+            elif level[y][x] == '@':
+                player = Player(x, y)
+                new_lev = list(lev_map[y])
+                new_lev[x] = '.'
+                lev_map[y] = ''.join(new_lev)
+    return player, x, y
 
 
 class Tile(pygame.sprite.Sprite):
@@ -87,9 +92,9 @@ class AnimatedSprite(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
-        self.x = 50
-        self.y = 521
+    def __init__(self, x, y):
+        self.x = (x + 1) * tile_width
+        self.y = y * tile_width - 29
         self.img_norm = load_image('shooter\shooter_walk_norm.png')
         self.img_flip = pygame.transform.flip(load_image('shooter\shooter_walk_flip.png'), True, False)
         self.stay_norm = load_image('shooter\shooter_stay.png')
@@ -104,20 +109,26 @@ class Player(pygame.sprite.Sprite):
         self.sit_fire_flip = pygame.transform.flip(load_image('shooter\shooter_sit_fire.png'), True, False)
         self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
         self.dx = 5
-        self.flag = True
+        self.dy = 5
+        self.flag = False
         self.direction_move = 1
         self.direction = 1
         self.fire = 0
+        self.jump_y = self.y
 
-    def move(self, direction=1, fire=0):
+    def move(self, direction=1, fire=0, jump=0):
         if direction == 1 or direction == 3:
             self.direction_move = direction
         if self.direction != direction or self.fire != fire:
             self.fire = fire
             self.update_img(direction)
             self.direction = direction
+        if jump == 1 and not self.flag:
+            self.flag = True
         if direction == 1:
-            if self.x < 750:
+            if self.x < width - 50 and \
+                    (lev_map[(self.y + 54) // tile_width - 1]
+                     [(self.x + 35) // tile_width] == '.'):
                 self.x += self.dx
                 self.walk.update(self.x, self.y)
         elif direction == 3:
@@ -137,6 +148,15 @@ class Player(pygame.sprite.Sprite):
                 self.walk.update(self.x, self.y)
             elif fire == 1 and self.direction_move == 3:
                 self.walk.update(self.x - 14, self.y)
+        if self.flag:
+            if self.y - self.jump_y < 25:
+                self.jump_y -= self.dy
+            elif self.y - self.jump_y >= 25:
+                self.jump_y += self.dy
+            self.walk.update(self.x, self.jump_y)
+            if lev_map[self.walk.rect.bottom // tile_width - 1][self.walk.rect.bottom // tile_width] != '.':
+                self.y = self.jump_y
+                self.flag = False
         if self.x <= 0:
             all_sprites.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
@@ -181,6 +201,18 @@ class Player(pygame.sprite.Sprite):
                     self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
                 elif self.fire == 1:
                     self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
+        elif direction == 5:
+            all_sprites.remove(self.walk)
+            if self.direction_move == 1:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
+            elif self.direction_move == 3:
+                if self.fire == 0:
+                    self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
+                elif self.fire == 1:
+                    self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
 
 
 lev_map = load_level('map.txt')
@@ -192,8 +224,7 @@ tile_images = {
     'land2': load_image('land2.png')
 }
 tile_width = tile_height = 25
-player, level_x, level_y = generate_level(lev_map)
-shooter = Player()
+shooter, level_x, level_y = generate_level(lev_map)
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -216,7 +247,11 @@ while True:
             shooter.move(7, 1)
         elif not mouse_buttons[0]:
             shooter.move(7, 0)
-
+    elif keys[pygame.K_SPACE]:
+        if mouse_buttons[0]:
+            shooter.move(0, 1, 1)
+        elif not mouse_buttons[0]:
+            shooter.move(0, 0, 1)
     elif (not keys[pygame.K_d] or keys[pygame.K_a]) and mouse_buttons[0]:
         shooter.move(0, 1)
     elif not keys[pygame.K_d] or not keys[pygame.K_a] or not keys[pygame.K_LCTRL]:
