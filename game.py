@@ -1,12 +1,15 @@
 import os
 import sys
 import pygame
+import math
 
 FPS = 10
 size = width, height = 800, 600
 clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+player_group = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
 
 
 def terminate():
@@ -57,22 +60,70 @@ def generate_level(level):
     return player, x, y
 
 
+class Camera:
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    def update(self, target):
+        self.dx = -(target.x + target.w // 2 - width // 2)
+        self.dy = -(target.y + target.h // 2 - height // 2)
+
+    def player_apply(self):
+        shooter.x += self.dx
+        shooter.y += self.dy
+        print(shooter.rect)
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
-        self.rect = self.image.get_rect().move(
-            tile_width * pos_x, tile_height * pos_y)
+        self.x = tile_width * pos_x
+        self.y = tile_height * pos_y
+        self.rect = self.image.get_rect().move(self.x, self.y)
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(bullets)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        distance_x = mouse_x - x
+        distance_y = mouse_y - y
+        angle = (180 / math.pi) * -math.atan2(distance_y, distance_x)
+        self.dx = 20 * math.cos(math.radians(angle))
+        self.dy = 20 * -math.sin(math.radians(angle))
+        self.image = load_image('shooter/bullet.png')
+        self.image = pygame.transform.rotate(load_image('shooter/bullet.png'), angle)
+        self.rect = self.image.get_rect().move(x, y)
+        '''
+        if x < mouse_x:
+            shooter.direction_move = 1
+            shooter.update_img(0)
+        elif x > mouse_x:
+            shooter.direction_move = 3
+            shooter.update_img(0)'''
+
+    def update(self):
+        if not pygame.sprite.groupcollide(bullets, tiles_group, True, False):
+            self.rect.x += self.dx
+            self.rect.y += self.dy
 
 
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y):
-        super().__init__(all_sprites)
+        super().__init__(player_group)
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -108,6 +159,9 @@ class Player(pygame.sprite.Sprite):
         self.sit_fire_norm = load_image('shooter\shooter_sit_fire.png')
         self.sit_fire_flip = pygame.transform.flip(load_image('shooter\shooter_sit_fire.png'), True, False)
         self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
+        self.h = self.walk.rect.h
+        self.w = self.walk.rect.w
+        self.rect = self.walk.image.get_rect().move(self.x, self.y)
         self.dx = 5
         self.dy = 5
         self.flag = False
@@ -116,9 +170,12 @@ class Player(pygame.sprite.Sprite):
         self.fire = 0
         self.jump_y = self.y
         self.jump = 0
-        self.max_jump = False
+        self.max_jump = True
+        self.count_fire = 0
+        print(self.rect)
 
     def move(self, direction=1, fire=0, jump=0):
+        print(self.rect)
         if direction == 1 or direction == 3:
             self.direction_move = direction
         if self.direction != direction or self.fire != fire or self.jump != jump:
@@ -126,6 +183,20 @@ class Player(pygame.sprite.Sprite):
             self.jump = jump
             self.update_img(direction)
             self.direction = direction
+        if fire == 1 and self.count_fire == 1:
+            self.count_fire = 0
+            if self.direction_move == 1:
+                if direction == 1 or direction == 0:
+                    Bullet(self.x + 45, self.y + 10)
+                elif direction == 7:
+                    Bullet(self.x + 45, self.y + 26)
+            elif self.direction_move == 3:
+                if direction == 3 or direction == 0:
+                    Bullet(self.x + 5, self.y + 10)
+                elif direction == 7:
+                    Bullet(self.x + 5, self.y + 26)
+        elif fire == 1 and self.count_fire != 1:
+            self.count_fire += 1
         if jump == 1 and not self.flag:
             self.flag = True
         if direction == 1:
@@ -150,42 +221,40 @@ class Player(pygame.sprite.Sprite):
             elif fire == 1 and self.direction_move == 3:
                 self.walk.update(self.x - 14, self.y)
         if self.flag:
+            if self.max_jump and pygame.sprite.spritecollide(self.walk, tiles_group, False):
+                self.max_jump = False
             if self.jump_y - self.y < 50 and not self.max_jump:
                 self.y -= self.dy
-            elif self.jump_y - self.y >= 50 or self.max_jump:
-                self.max_jump = True
-                self.y += self.dy
-            self.walk.update(self.x, self.y)
-            if self.direction_move == 3:
-                x = (self.x + 10)
-            elif self.direction_move == 1:
-                x = (self.x + 35)
-            if lev_map[(self.y + 54) // tile_height][x // tile_width] != '.':
-                self.jump_y = self.y
+            elif self.jump_y - self.y >= 50:
                 self.flag = False
-                self.max_jump = False
+                self.max_jump = True
+            self.walk.update(self.x, self.y)
         if self.x <= 0:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
         elif self.x >= 750:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+        if not pygame.sprite.spritecollide(self.walk, tiles_group, False) and self.max_jump:
+            self.jump_y = self.y
+            self.y += self.dy
+            self.walk.update(self.x, self.y)
 
     def update_img(self, direction):
         if direction == 3:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             if self.fire == 0:
                 self.walk = AnimatedSprite(self.img_flip, 10, 1, self.x, self.y)
             elif self.fire == 1:
                 self.walk = AnimatedSprite(self.fire_flip, 10, 1, self.x - 14, self.y)
         elif direction == 1:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             if self.fire == 0:
                 self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
             elif self.fire == 1:
                 self.walk = AnimatedSprite(self.fire_norm, 10, 1, self.x, self.y)
         elif direction == 7:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
                     self.walk = AnimatedSprite(self.sit_norm, 1, 1, self.x, self.y + 16)
@@ -197,7 +266,7 @@ class Player(pygame.sprite.Sprite):
                 elif self.fire == 1:
                     self.walk = AnimatedSprite(self.sit_fire_flip, 1, 1, self.x - 11, self.y + 16)
         elif direction == 0:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
                     self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
@@ -209,7 +278,7 @@ class Player(pygame.sprite.Sprite):
                 elif self.fire == 1:
                     self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
         elif self.jump:
-            all_sprites.remove(self.walk)
+            player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
                     self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
@@ -232,6 +301,7 @@ tile_images = {
 }
 tile_width = tile_height = 25
 shooter, level_x, level_y = generate_level(lev_map)
+camera = Camera()
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -263,7 +333,20 @@ while True:
             shooter.move(0, 1, 1)
         elif not mouse_buttons[0]:
             shooter.move(0, 0, 1)
+    for sprite in bullets:
+        sprite.update()
+        if sprite.rect.x > width or sprite.rect.x < 0 or\
+                sprite.rect.y > height or sprite.rect.y < 0:
+            bullets.remove(sprite)
+    '''
+    camera.update(shooter)
+    for sprite in all_sprites:
+        camera.apply(sprite)
+    camera.player_apply()
+    '''
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
+    bullets.draw(screen)
+    player_group.draw(screen)
     pygame.display.update()
     clock.tick(FPS)
