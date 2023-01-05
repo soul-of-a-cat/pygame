@@ -7,7 +7,7 @@ FPS = 10
 size = width, height = 800, 600
 clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
+level_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
@@ -33,33 +33,29 @@ def load_image(name, colorkey=None):
     return image
 
 
-def load_level(filename):
-    fullname = os.path.join('data', filename)
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
+def load_level(group_files):
+    file1 = os.path.join('data', group_files[0])
+    file2 = os.path.join('data', group_files[1])
+    if not os.path.isfile(file1):
+        print(f"Файл с изображением '{file1}' не найден")
         sys.exit()
-    with open(fullname, 'r') as mapFile:
-        level_map = [line.strip() for line in mapFile]
-    max_width = max(map(len, level_map))
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+    if not os.path.isfile(file2):
+        print(f"Файл с изображением '{file2}' не найден")
+        sys.exit()
+    Level(file1, file2)
 
 
-def generate_level(level):
-    player, x, y = None, None, None
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] == '!':
-                Tile('land1', x, y)
-            elif level[y][x] == '#':
-                Tile('land2', x, y)
-            elif level[y][x] == '@':
-                player = Player(x, y)
-                new_lev = list(lev_map[y])
-                new_lev[x] = '.'
-                lev_map[y] = ''.join(new_lev)
-    return player, x, y
+class Level(pygame.sprite.Sprite):
+    def __init__(self, file1, file2):
+        super().__init__(level_group)
+        image1 = load_image(file1)
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(image1)
+        image2 = load_image(file2)
+        self.image = image1.copy()
+        self.image.blit(image2, (0, 0))
 
-
+'''
 class Camera:
     def __init__(self):
         self.dx = 0
@@ -77,16 +73,7 @@ class Camera:
         shooter.x += self.dx
         shooter.y += self.dy
         print(shooter.rect)
-
-
-class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
-        self.image = tile_images[tile_type]
-        self.x = tile_width * pos_x
-        self.y = tile_height * pos_y
-        self.rect = self.image.get_rect().move(self.x, self.y)
-        self.mask = pygame.mask.from_surface(self.image)
+'''
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -110,7 +97,7 @@ class Bullet(pygame.sprite.Sprite):
             shooter.update_img(0)'''
 
     def update(self):
-        if not pygame.sprite.groupcollide(bullets, tiles_group, True, False):
+        if not pygame.sprite.groupcollide(bullets, level_group, True, False):
             self.rect.x += self.dx
             self.rect.y += self.dy
 
@@ -144,8 +131,8 @@ class AnimatedSprite(pygame.sprite.Sprite):
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        self.x = (x + 1) * tile_width
-        self.y = y * tile_width - 29
+        self.x = 45
+        self.y = 800
         self.img_norm = load_image('shooter\shooter_walk_norm.png')
         self.img_flip = pygame.transform.flip(load_image('shooter\shooter_walk_flip.png'), True, False)
         self.stay_norm = load_image('shooter\shooter_stay.png')
@@ -172,10 +159,9 @@ class Player(pygame.sprite.Sprite):
         self.jump = 0
         self.max_jump = True
         self.count_fire = 0
-        print(self.rect)
 
     def move(self, direction=1, fire=0, jump=0):
-        print(self.rect)
+        self.rect = self.walk.image.get_rect().move(self.x, self.y)
         if direction == 1 or direction == 3:
             self.direction_move = direction
         if self.direction != direction or self.fire != fire or self.jump != jump:
@@ -200,7 +186,7 @@ class Player(pygame.sprite.Sprite):
         if jump == 1 and not self.flag:
             self.flag = True
         if direction == 1:
-            if self.x < width - 50 and lev_map[(self.y + 54) // tile_height - 1][(self.x + 50) // tile_width] == '.':
+            if self.x < width - 50 and lev_map[(self.y + 54) // tile_height - 1][self.x // tile_width] == '.':
                 self.x += self.dx
                 self.walk.update(self.x, self.y)
         elif direction == 3:
@@ -289,6 +275,38 @@ class Player(pygame.sprite.Sprite):
                     self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
                 elif self.fire == 1:
                     self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
+        
+    def press_key(self):
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_buttons = pygame.mouse.get_pressed()
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_d]:
+            if mouse_buttons[0]:
+                self.move(1, 1)
+            elif not mouse_buttons[0]:
+                self.move(1, 0)
+        elif keys[pygame.K_a]:
+            if mouse_buttons[0]:
+                self.move(3, 1)
+            elif not mouse_buttons[0]:
+                self.move(3, 0)
+        elif keys[pygame.K_LCTRL]:
+            if mouse_buttons[0]:
+                self.move(7, 1)
+            elif not mouse_buttons[0]:
+                self.move(7, 0)
+        elif (not keys[pygame.K_d] or keys[pygame.K_a]) and mouse_buttons[0]:
+            self.move(0, 1)
+        elif not keys[pygame.K_d] or not keys[pygame.K_a] or not keys[pygame.K_LCTRL]:
+            self.move(0)
+        if keys[pygame.K_SPACE]:
+            if mouse_buttons[0]:
+                self.move(0, 1, 1)
+            elif not mouse_buttons[0]:
+                self.move(0, 0, 1)
+
+    def update(self):
+        self.press_key()
 
 
 lev_map = load_level('map.txt')
@@ -299,40 +317,17 @@ tile_images = {
     'land1': load_image('land1.png'),
     'land2': load_image('land2.png')
 }
+maps = {
+    'level1': ('maps\level1_1', 'maps\level1_2')
+}
 tile_width = tile_height = 25
 shooter, level_x, level_y = generate_level(lev_map)
-camera = Camera()
+# camera = Camera()
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
-    mouse_pos = pygame.mouse.get_pos()
-    mouse_buttons = pygame.mouse.get_pressed()
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_d]:
-        if mouse_buttons[0]:
-            shooter.move(1, 1)
-        elif not mouse_buttons[0]:
-            shooter.move(1, 0)
-    elif keys[pygame.K_a]:
-        if mouse_buttons[0]:
-            shooter.move(3, 1)
-        elif not mouse_buttons[0]:
-            shooter.move(3, 0)
-    elif keys[pygame.K_LCTRL]:
-        if mouse_buttons[0]:
-            shooter.move(7, 1)
-        elif not mouse_buttons[0]:
-            shooter.move(7, 0)
-    elif (not keys[pygame.K_d] or keys[pygame.K_a]) and mouse_buttons[0]:
-        shooter.move(0, 1)
-    elif not keys[pygame.K_d] or not keys[pygame.K_a] or not keys[pygame.K_LCTRL]:
-        shooter.move(0)
-    if keys[pygame.K_SPACE]:
-        if mouse_buttons[0]:
-            shooter.move(0, 1, 1)
-        elif not mouse_buttons[0]:
-            shooter.move(0, 0, 1)
+    shooter.update()
     for sprite in bullets:
         sprite.update()
         if sprite.rect.x > width or sprite.rect.x < 0 or\
