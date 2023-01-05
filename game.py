@@ -91,13 +91,11 @@ class Bullet(pygame.sprite.Sprite):
         self.image = load_image('shooter/bullet.png')
         self.image = pygame.transform.rotate(load_image('shooter/bullet.png'), angle)
         self.rect = self.image.get_rect().move(x, y)
-        '''
         if x < mouse_x:
             shooter.direction_move = 1
-            shooter.update_img(0)
         elif x > mouse_x:
             shooter.direction_move = 3
-            shooter.update_img(0)'''
+        shooter.update()
 
     def update(self):
         if not pygame.sprite.groupcollide(bullets, tiles_group, True, False):
@@ -123,15 +121,17 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(
                     frame_location, self.rect.size)))
 
-    def update(self, x, y):
+    def update(self, x, y, flag=True):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        print(flag)
+        if flag:
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.y = y
 
 
-class Player(pygame.sprite.Sprite):
+class Player:
     def __init__(self, x, y):
         self.x = x * tile_width
         self.y = (y * tile_width) - 28
@@ -188,16 +188,29 @@ class Player(pygame.sprite.Sprite):
         if jump == 1 and not self.flag:
             self.flag = True
         if direction == 1:
-            if self.x < width - 50 and self.colloide_x():
+            if self.x < level_x * tile_width - 50 and self.colloide_x():
                 self.x += self.dx
-                self.walk.update(self.x, self.y)
+                print(self.x)
+                if 400 <= self.x < level_x * tile_width - 400:
+                    camera.apply(-5, 0)
+                    self.walk.update(self.x, self.y, False)
+                else:
+                    self.walk.update(self.x, self.y, True)
         elif direction == 3:
             if self.x > 0 and self.colloide_x():
                 self.x -= self.dx
                 if fire == 0:
-                    self.walk.update(self.x, self.y)
+                    if 400 <= self.x < level_x * tile_width - 400:
+                        camera.apply(5, 0)
+                        self.walk.update(self.x, self.y, False)
+                    else:
+                        self.walk.update(self.x, self.y)
                 if self.fire == 1:
-                    self.walk.update(self.x - 14, self.y)
+                    if 400 <= self.x < level_x * tile_width - 400:
+                        camera.apply(5, 0)
+                        self.walk.update(self.x - 14, self.y, False)
+                    else:
+                        self.walk.update(self.x - 14, self.y)
         elif direction == 7:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
                 self.walk.update(self.x, self.y + 16)
@@ -205,28 +218,37 @@ class Player(pygame.sprite.Sprite):
                 self.walk.update(self.x - 11, self.y + 16)
         elif direction == 0:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
-                self.walk.update(self.x, self.y)
+                self.walk.update(self.x, self.y, False)
             elif fire == 1 and self.direction_move == 3:
-                self.walk.update(self.x - 14, self.y)
+                self.walk.update(self.x - 14, self.y, False)
         if self.flag:
             if self.max_jump and pygame.sprite.spritecollide(self.walk, tiles_group, False):
+                self.jump_y = self.y
                 self.max_jump = False
             if self.jump_y - self.y < 50 and not self.max_jump:
                 self.y -= self.dy
             elif self.jump_y - self.y >= 50:
                 self.flag = False
                 self.max_jump = True
-            self.walk.update(self.x, self.y)
+            if 400 <= self.x < level_x * tile_width - 400 and 200 <= self.y < level_y * tile_height - 200:
+                camera.apply(0, -5)
+                self.walk.update(self.x, self.y, False)
+            else:
+                self.walk.update(self.x, self.y)
         if self.x <= 0:
             player_group.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
-        elif self.x >= level_x - 50:
+        elif self.x >= level_x * tile_width - 50:
             player_group.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
         if not pygame.sprite.spritecollide(self.walk, tiles_group, False) and self.max_jump:
             self.jump_y = self.y
             self.y += self.dy
-            self.walk.update(self.x, self.y)
+            if 400 <= self.x < level_x * tile_width - 400 and 200 <= self.y < level_y * tile_height - 200:
+                camera.apply(0, 5)
+                self.walk.update(self.x, self.y, False)
+            else:
+                self.walk.update(self.x, self.y)
 
     def update_img(self, direction):
         if direction == 3:
@@ -280,11 +302,11 @@ class Player(pygame.sprite.Sprite):
 
     def colloide_x(self):
         self.walk.rect.y -= self.dy
-        flag = True
         if pygame.sprite.spritecollide(self.walk, tiles_group, False):
-            flag = False
+            self.walk.rect.y += self.dy
+            return False
         self.walk.rect.y += self.dy
-        return flag
+        return True
 
     def press_key(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -329,15 +351,13 @@ tile_images = {
 }
 tile_width = tile_height = 25
 shooter, level_x, level_y = generate_level(lev_map)
-dragon = AnimatedSprite(load_image("shooter\shooter_walk_flip.png"), 10, 1, 50, 50)
-# camera = Camera()
+camera = Camera()
 # player_camera = True
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
     shooter.update()
-    dragon.update(50, 50)
     for sprite in bullets:
         sprite.update()
         if sprite.rect.x > width or sprite.rect.x < 0 or \
