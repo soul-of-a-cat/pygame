@@ -77,6 +77,7 @@ class Camera:
         for sprite in all_sprites:
             sprite.rect.x += dx
             sprite.rect.y += dy
+            # print(sprite, sprite.rect.x, sprite.rect.y)
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -159,8 +160,11 @@ class Player:
         self.jump = 0
         self.max_jump = True
         self.count_fire = 0
+        self.old_x = 400
+        self.old_y = 300
 
     def move(self, direction=1, fire=0, jump=0):
+        self.rect = self.walk.image.get_rect().move(self.x, self.y)
         if direction == 1 or direction == 3:
             self.direction_move = direction
         if self.direction != direction or self.fire != fire or self.jump != jump:
@@ -168,6 +172,7 @@ class Player:
             self.jump = jump
             self.update_img(direction)
             self.direction = direction
+
         if fire == 1 and self.count_fire == 1:
             self.count_fire = 0
             if self.direction_move == 1:
@@ -185,16 +190,19 @@ class Player:
         if jump == 1 and not self.flag:
             self.flag = True
         if direction == 1:
-            if self.x < level_x * tile_width - 50 and self.colloide_x():
+            if self.x < level_x * tile_width - 50 and self.collide_x():
                 self.x += self.dx
-                self.walk.update(self.x, self.y)
+                self.pos(-self.dx, 0)
+                # self.walk.update(self.x, self.y)
         elif direction == 3:
-            if self.x > 0 and self.colloide_x():
+            if self.x > 0 and self.collide_x():
                 self.x -= self.dx
                 if fire == 0:
-                    self.walk.update(self.x, self.y)
+                    self.pos(self.dx, 0)
+                    # self.walk.update(self.x, self.y)
                 if self.fire == 1:
-                    self.walk.update(self.x - 14, self.y)
+                    self.pos(self.dx - 14, 0)
+                    # self.walk.update(self.x - 14, self.y)
         elif direction == 7:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
                 self.walk.update(self.x, self.y + 16)
@@ -202,9 +210,11 @@ class Player:
                 self.walk.update(self.x - 11, self.y + 16)
         elif direction == 0:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
-                self.walk.update(self.x, self.y)
+                self.pos(0, 0)
+                # self.walk.update(self.x, self.y)
             elif fire == 1 and self.direction_move == 3:
-                self.walk.update(self.x - 14, self.y)
+                self.pos(-14, 0)
+                # self.walk.update(self.x - 14, self.y)
         if self.flag:
             if self.max_jump and pygame.sprite.spritecollide(self.walk, tiles_group, False):
                 self.jump_y = self.y
@@ -214,74 +224,177 @@ class Player:
             elif self.jump_y - self.y >= 50:
                 self.flag = False
                 self.max_jump = True
-            self.walk.update(self.x, self.y)
+            self.pos(0, self.dy)
+            # self.walk.update(self.x, self.y)
         if self.x <= 0:
             player_group.remove(self.walk)
-            self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
+            if 400 <= self.x < (level_x + 1) * tile_width - 400:
+                self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.old_x, self.old_y)
+            else:
+                self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
         elif self.x >= level_x * tile_width - 50:
             player_group.remove(self.walk)
-            self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
-        if not pygame.sprite.spritecollide(self.walk, tiles_group, False) and self.max_jump:
+            if 400 <= self.x < (level_x + 1) * tile_width - 400:
+                self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.old_x, self.old_y)
+            else:
+                self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+        if self.collide_y() and self.max_jump:
             self.jump_y = self.y
             self.y += self.dy
-            self.walk.update(self.x, self.y)
+            self.pos(0, -self.dy)
+            # self.walk.update(self.x, self.y)
 
     def update_img(self, direction):
         if direction == 3:
             player_group.remove(self.walk)
             if self.fire == 0:
-                self.walk = AnimatedSprite(self.img_flip, 10, 1, self.x, self.y)
+                if 400 <= self.x:
+                    self.walk = AnimatedSprite(self.img_flip, 10, 1, self.old_x, self.old_y)
+                else:
+                    self.walk = AnimatedSprite(self.img_flip, 10, 1, self.x, self.y)
             elif self.fire == 1:
-                self.walk = AnimatedSprite(self.fire_flip, 10, 1, self.x - 14, self.y)
+                if 400 <= self.x:
+                    self.walk = AnimatedSprite(self.fire_flip, 10, 1, self.old_x - 14, self.old_y)
+                else:
+                    self.walk = AnimatedSprite(self.fire_flip, 10, 1, self.x - 14, self.y)
         elif direction == 1:
             player_group.remove(self.walk)
             if self.fire == 0:
-                self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
+                if 400 <= self.x:
+                    # print(5)
+                    self.walk = AnimatedSprite(self.img_norm, 10, 1, self.old_x, self.old_y)
+                else:
+                    # print(6)
+                    self.walk = AnimatedSprite(self.img_norm, 10, 1, self.x, self.y)
             elif self.fire == 1:
-                self.walk = AnimatedSprite(self.fire_norm, 10, 1, self.x, self.y)
+                if 400 <= self.x:
+                    self.walk = AnimatedSprite(self.fire_norm, 10, 1, self.old_x, self.old_y)
+                else:
+                    self.walk = AnimatedSprite(self.fire_norm, 10, 1, self.x, self.y)
         elif direction == 7:
             player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.sit_norm, 1, 1, self.x, self.y + 16)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.sit_norm, 1, 1, self.old_x, self.old_y + 16)
+                    else:
+                        self.walk = AnimatedSprite(self.sit_norm, 1, 1, self.x, self.y + 16)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.sit_fire_norm, 1, 1, self.x, self.y + 16)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.sit_fire_norm, 1, 1, self.old_x, self.old_y + 16)
+                    else:
+                        self.walk = AnimatedSprite(self.sit_fire_norm, 1, 1, self.x, self.y + 16)
             elif self.direction_move == 3:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.sit_flip, 1, 1, self.x, self.y + 16)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.sit_flip, 1, 1, self.old_x, self.old_y + 16)
+                    else:
+                        self.walk = AnimatedSprite(self.sit_flip, 1, 1, self.x, self.y + 16)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.sit_fire_flip, 1, 1, self.x - 11, self.y + 16)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.sit_fire_flip, 1, 1, self.old_x - 11, self.old_y + 16)
+                    else:
+                        self.walk = AnimatedSprite(self.sit_fire_flip, 1, 1, self.x - 11, self.y + 16)
         elif direction == 0:
             player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        # print(7)
+                        self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.old_x, self.old_y)
+                    else:
+                        # print(8)
+                        self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.old_x, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
             elif self.direction_move == 3:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.old_x, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.old_x - 14, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
         elif self.jump:
             player_group.remove(self.walk)
             if self.direction_move == 1:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.old_x, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.stay_norm, 1, 1, self.x, self.y)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.old_x, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.fire_stay_norm, 1, 1, self.x, self.y)
             elif self.direction_move == 3:
                 if self.fire == 0:
-                    self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.old_x, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
                 elif self.fire == 1:
-                    self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
+                    if 400 <= self.x:
+                        self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.old_x - 14, self.old_y)
+                    else:
+                        self.walk = AnimatedSprite(self.fire_stay_flip, 1, 1, self.x - 14, self.y)
 
-    def colloide_x(self):
+    def pos(self, dx, dy):
+        print(self.x, self.y, self.x - self.old_x, 400 <= self.x < (level_x + 1) * tile_width - 400)
+        if 400 <= self.x < (level_x + 1) * tile_width - 400 and 300 <= self.y < (level_y + 1) * tile_height - 200:
+            # print(1)
+            camera.apply(dx, dy)
+            self.walk.update(self.old_x, self.old_y)
+        elif 400 <= self.x < (level_x + 1) * tile_width - 400 and not 300 <= self.y < (level_y + 1) * tile_height - 200:
+            # print(2)
+            camera.apply(dx, dy)
+            self.walk.update(self.old_x, self.y)
+        elif not 400 <= self.x < (level_x + 1) * tile_width - 400 and 300 <= self.y < (level_y + 1) * tile_height - 200:
+            # print(3)
+            camera.apply(dx, dy)
+            self.walk.update(self.x, self.old_y)
+        elif (level_x + 1) * tile_width - 400 <= self.x:
+            x = self.x - 2 * self.old_x
+            y = self.y
+            self.walk.update(x, y)
+        else:
+            # print(4)
+            self.walk.update(self.x, self.y)
+
+    def collide_x(self):
         self.walk.rect.y -= self.dy
+        flag = True
         if pygame.sprite.spritecollide(self.walk, tiles_group, False):
-            self.walk.rect.y += self.dy
-            return False
+            flag = False
         self.walk.rect.y += self.dy
+        return flag
+
+    def collide_y(self):
+        if self.x < 400:
+            if pygame.sprite.spritecollide(self.walk, tiles_group, False):
+                return False
+        elif 400 <= self.x < (level_x + 1) * tile_width - 400:
+            x = self.walk.rect.x
+            self.walk.rect.x = self.old_x
+            if pygame.sprite.spritecollide(self.walk, tiles_group, False):
+                self.walk.rect.x = x
+                return False
+            self.walk.rect.x = x
+        elif (level_x + 1) * tile_width - 400 <= self.x:
+            x = self.walk.rect.x
+            self.walk.rect.x -= 2 * self.old_x
+            print(pygame.sprite.spritecollide(self.walk, tiles_group, False), self.x, self.y)
+            if pygame.sprite.spritecollide(self.walk, tiles_group, False):
+                self.walk.rect.x = x
+                return False
+            self.walk.rect.x = x
         return True
 
     def press_key(self):
