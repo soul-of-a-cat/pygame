@@ -121,14 +121,12 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(
                     frame_location, self.rect.size)))
 
-    def update(self, x, y, flag=True):
+    def update(self, x, y):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
-        print(flag)
-        if flag:
-            self.rect = self.image.get_rect()
-            self.rect.x = x
-            self.rect.y = y
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
 
 class Player:
@@ -163,7 +161,6 @@ class Player:
         self.count_fire = 0
 
     def move(self, direction=1, fire=0, jump=0):
-        self.rect = self.walk.image.get_rect().move(self.x, self.y)
         if direction == 1 or direction == 3:
             self.direction_move = direction
         if self.direction != direction or self.fire != fire or self.jump != jump:
@@ -180,9 +177,9 @@ class Player:
                     Bullet(self.x + 45, self.y + 26)
             elif self.direction_move == 3:
                 if direction == 3 or direction == 0:
-                    Bullet(self.x + 5, self.y + 10)
+                    Bullet(self.x, self.y + 10)
                 elif direction == 7:
-                    Bullet(self.x + 5, self.y + 26)
+                    Bullet(self.x, self.y + 26)
         elif fire == 1 and self.count_fire != 1:
             self.count_fire += 1
         if jump == 1 and not self.flag:
@@ -190,27 +187,14 @@ class Player:
         if direction == 1:
             if self.x < level_x * tile_width - 50 and self.colloide_x():
                 self.x += self.dx
-                print(self.x)
-                if 400 <= self.x < level_x * tile_width - 400:
-                    camera.apply(-5, 0)
-                    self.walk.update(self.x, self.y, False)
-                else:
-                    self.walk.update(self.x, self.y, True)
+                self.walk.update(self.x, self.y)
         elif direction == 3:
             if self.x > 0 and self.colloide_x():
                 self.x -= self.dx
                 if fire == 0:
-                    if 400 <= self.x < level_x * tile_width - 400:
-                        camera.apply(5, 0)
-                        self.walk.update(self.x, self.y, False)
-                    else:
-                        self.walk.update(self.x, self.y)
+                    self.walk.update(self.x, self.y)
                 if self.fire == 1:
-                    if 400 <= self.x < level_x * tile_width - 400:
-                        camera.apply(5, 0)
-                        self.walk.update(self.x - 14, self.y, False)
-                    else:
-                        self.walk.update(self.x - 14, self.y)
+                    self.walk.update(self.x - 14, self.y)
         elif direction == 7:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
                 self.walk.update(self.x, self.y + 16)
@@ -218,9 +202,9 @@ class Player:
                 self.walk.update(self.x - 11, self.y + 16)
         elif direction == 0:
             if fire == 0 or (fire == 1 and self.direction_move == 1):
-                self.walk.update(self.x, self.y, False)
+                self.walk.update(self.x, self.y)
             elif fire == 1 and self.direction_move == 3:
-                self.walk.update(self.x - 14, self.y, False)
+                self.walk.update(self.x - 14, self.y)
         if self.flag:
             if self.max_jump and pygame.sprite.spritecollide(self.walk, tiles_group, False):
                 self.jump_y = self.y
@@ -230,11 +214,7 @@ class Player:
             elif self.jump_y - self.y >= 50:
                 self.flag = False
                 self.max_jump = True
-            if 400 <= self.x < level_x * tile_width - 400 and 200 <= self.y < level_y * tile_height - 200:
-                camera.apply(0, -5)
-                self.walk.update(self.x, self.y, False)
-            else:
-                self.walk.update(self.x, self.y)
+            self.walk.update(self.x, self.y)
         if self.x <= 0:
             player_group.remove(self.walk)
             self.walk = AnimatedSprite(self.stay_flip, 1, 1, self.x, self.y)
@@ -244,11 +224,7 @@ class Player:
         if not pygame.sprite.spritecollide(self.walk, tiles_group, False) and self.max_jump:
             self.jump_y = self.y
             self.y += self.dy
-            if 400 <= self.x < level_x * tile_width - 400 and 200 <= self.y < level_y * tile_height - 200:
-                camera.apply(0, 5)
-                self.walk.update(self.x, self.y, False)
-            else:
-                self.walk.update(self.x, self.y)
+            self.walk.update(self.x, self.y)
 
     def update_img(self, direction):
         if direction == 3:
