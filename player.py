@@ -56,6 +56,7 @@ class Camera:
         for sprite in all_sprites:
             sprite.rect.x += dx
             sprite.rect.y += dy
+            print(sprite, sprite.rect.x)
 
 
 class Bullet(pygame.sprite.Sprite):

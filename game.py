@@ -1,9 +1,11 @@
 import sys
 import pygame
 from player import shooter, bullets, all_sprites, player_group, screen, width, height
+from mobs import robot, robot_group
 
 FPS = 10
 clock = pygame.time.Clock()
+robot_count = 0
 
 
 def terminate():
@@ -16,7 +18,12 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
+    if robot_count < 1:
+        robot()
+        robot_count += 1
     shooter.update()
+    for rob in robot_group.sprites():
+        rob.update()
     for sprite in bullets:
         sprite.update()
         if sprite.rect.x > width or sprite.rect.x < 0 or \
