@@ -4,6 +4,7 @@ import math
 from player import all_sprites, tile_width, level_y, level_x, load_image, tiles_group, shooter, camera
 from animation import AnimatedSprite
 
+robot_bullets = pygame.sprite.Group()
 robot_group = []
 
 
@@ -35,18 +36,56 @@ class Robot:
         self.direction = 1
         self.jump_y = self.y
         self.max_jump = True
+        self.bullet_speed = 0
 
     def move(self):
-        distance = math.sqrt((shooter.x - self.sprite.rect.x) ** 2 + (shooter.y - self.sprite.rect.y) ** 2)
+        if shooter.x < 400:
+            distance = math.sqrt((shooter.x - self.sprite.rect.x) ** 2 + (shooter.y - self.sprite.rect.y) ** 2)
+        elif 400 <= shooter.x < (level_x + 1) * tile_width - 400:
+            distance = math.sqrt((shooter.old_x - self.sprite.rect.x) ** 2 + (shooter.y - self.sprite.rect.y) ** 2)
+        elif (level_x + 1) * tile_width - 400 <= shooter.x:
+            x = shooter.x - 2 * shooter.old_x
+            distance = math.sqrt((x - self.sprite.rect.x) ** 2 + (shooter.y - self.sprite.rect.y) ** 2)
         if distance > 400:
             direction = choice([1, 3])
         elif distance <= 400:
-            if self.sprite.rect.x - shooter.x <= 50:
-                direction = 1
-            elif self.sprite.rect.x - shooter.x >= -50:
-                direction = 3
-            else:
-                direction = self.direction
+            if shooter.x < 400:
+                if self.sprite.rect.x - shooter.x <= 50:
+                    direction = 1
+                elif self.sprite.rect.x - shooter.x >= -50:
+                    direction = 3
+                else:
+                    direction = self.direction
+                if self.bullet_speed == 3:
+                    Bullet(shooter.x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                    self.bullet_speed = 0
+                else:
+                    self.bullet_speed += 1
+            elif 400 <= shooter.x < (level_x + 1) * tile_width - 400:
+                if self.sprite.rect.x - shooter.old_x <= 50:
+                    direction = 1
+                elif self.sprite.rect.x - shooter.old_x >= -50:
+                    direction = 3
+                else:
+                    direction = self.direction
+                if self.bullet_speed == 3:
+                    Bullet(shooter.old_x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                    self.bullet_speed = 0
+                else:
+                    self.bullet_speed += 1
+            elif (level_x + 1) * tile_width - 400 <= shooter.x:
+                x = shooter.x - 2 * shooter.old_x
+                if self.sprite.rect.x - x <= 50:
+                    direction = 1
+                elif self.sprite.rect.x - x >= -50:
+                    direction = 3
+                else:
+                    direction = self.direction
+                if self.bullet_speed == 3:
+                    Bullet(x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                    self.bullet_speed = 0
+                else:
+                    self.bullet_speed += 1
         if self.direction != direction:
             self.direction = direction
             self.image_update()
@@ -89,3 +128,20 @@ class Robot:
 
     def update(self):
         self.move()
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(robot_bullets)
+        distance_x = x1 - x2
+        distance_y = y1 - y2
+        angle = (180 / math.pi) * -math.atan2(distance_y, distance_x)
+        self.dx = 20 * math.cos(math.radians(angle))
+        self.dy = 20 * -math.sin(math.radians(angle))
+        self.image = pygame.transform.rotate(load_image('robot/bullet.png'), angle)
+        self.rect = self.image.get_rect().move(x2, y2)
+
+    def update(self):
+        if not pygame.sprite.groupcollide(robot_bullets, tiles_group, True, False):
+            self.rect.x += self.dx
+            self.rect.y += self.dy

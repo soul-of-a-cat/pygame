@@ -1,7 +1,7 @@
 import sys
 import pygame
 from player import shooter, bullets, all_sprites, player_group, screen, width, height, clock, FPS
-from mobs import robot, robot_group
+from mobs import robot, robot_group, robot_bullets
 from start_final import start_screen
 
 robot_count = 0
@@ -18,7 +18,7 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             terminate()
-    if robot_count < 1:
+    if robot_count < 5:
         robot()
         robot_count += 1
     shooter.update()
@@ -29,6 +29,11 @@ while True:
         if sprite.rect.x > width or sprite.rect.x < 0 or \
                 sprite.rect.y > height or sprite.rect.y < 0:
             bullets.remove(sprite)
+    for sprite in robot_bullets:
+        sprite.update()
+        if sprite.rect.x > width or sprite.rect.x < 0 or \
+                sprite.rect.y > height or sprite.rect.y < 0:
+            robot_bullets.remove(sprite)
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     bullets.draw(screen)

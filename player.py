@@ -67,7 +67,6 @@ class Bullet(pygame.sprite.Sprite):
         angle = (180 / math.pi) * -math.atan2(distance_y, distance_x)
         self.dx = 20 * math.cos(math.radians(angle))
         self.dy = 20 * -math.sin(math.radians(angle))
-        self.image = load_image('shooter/bullet.png')
         self.image = pygame.transform.rotate(load_image('shooter/bullet.png'), angle)
         self.rect = self.image.get_rect().move(x, y)
 
