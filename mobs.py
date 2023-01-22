@@ -1,10 +1,10 @@
 import pygame
 from random import randrange, choice
 import math
-from player import all_sprites, tile_width, level_y, level_x, load_image, tiles_group, shooter
+from player import all_sprites, tile_width, level_y, level_x, load_image, tiles_group, shooter, camera
 from animation import AnimatedSprite
 
-robot_group = pygame.sprite.Group()
+robot_group = []
 
 
 def robot():
@@ -15,12 +15,12 @@ def robot():
             all_sprites.remove(robot.sprite)
             robot = Robot(randrange(0, (level_x - 1) * tile_width, 5), randrange(0, (level_y + 1) * tile_width, 5))
         else:
+            robot_group.append(robot)
             break
 
 
-class Robot(pygame.sprite.Sprite):
+class Robot:
     def __init__(self, x, y):
-        super().__init__(robot_group)
         self.x = x
         self.y = y + 1
         self.img_norm = load_image('robot/robot_walk_norm.png')
@@ -37,47 +37,47 @@ class Robot(pygame.sprite.Sprite):
         self.max_jump = True
 
     def move(self):
-        self.x = self.rect.x
-        self.y = self.rect.y
-        distance = math.sqrt((shooter.x - self.x) ** 2 + (shooter.y - self.y) ** 2)
+        distance = math.sqrt((shooter.x - self.sprite.rect.x) ** 2 + (shooter.y - self.sprite.rect.y) ** 2)
         if distance > 400:
             direction = choice([1, 3])
         elif distance <= 400:
-            if self.x - shooter.x <= 0:
-                direction = 3
-            elif self.x - shooter.x >= 0:
+            if self.sprite.rect.x - shooter.x <= 50:
                 direction = 1
+            elif self.sprite.rect.x - shooter.x >= -50:
+                direction = 3
+            else:
+                direction = self.direction
         if self.direction != direction:
             self.direction = direction
             self.image_update()
         if self.direction == 1:
-            if self.collide_x() and self.x < level_x * tile_width - 50:
-                self.rect.x += self.dx
-                self.sprite.update(self.x, self.y)
-            elif not self.collide_x() and self.x < level_x * tile_width - 50:
-                if self.max_jump and pygame.sprite.spritecollide(self.sprite, tiles_group, False):
-                    self.jump_y = self.rect.y
-                    self.max_jump = False
-                if self.jump_y - self.y < 30 and not self.max_jump:
-                    self.rect.y -= self.dy
-                elif self.jump_y - self.y >= 30:
-                    self.max_jump = True
-                self.sprite.update(self.x, self.y)
+            if self.sprite.rect.x < level_x * tile_width - 50:
+                self.sprite.rect.x += self.dx
+                self.sprite.update(self.sprite.rect.x, self.sprite.rect.y)
         elif self.direction == 3:
-            if self.collide_x() and self.x > 0:
-                self.rect.x -= self.dx
-                self.sprite.update(self.x, self.y)
-        if not pygame.sprite.spritecollide(self.sprite, all_sprites, False) and self.max_jump:
-            self.rect.y += self.dy
-            self.sprite.update(self.x, self.y)
+            if self.x > 0:
+                self.sprite.rect.x -= self.dx
+                self.sprite.update(self.sprite.rect.x, self.sprite.rect.y)
+        if 0 <= self.sprite.rect.x < level_x * tile_width - 50:
+            if self.max_jump and not self.collide_x():
+                self.jump_y = self.sprite.rect.y
+                self.max_jump = False
+            if self.jump_y - self.sprite.rect.y < 30 and not self.max_jump:
+                self.sprite.rect.y -= self.dy
+            elif self.jump_y - self.sprite.rect.y >= 30:
+                self.max_jump = True
+            self.sprite.update(self.sprite.rect.x, self.sprite.rect.y)
+        if not pygame.sprite.spritecollide(self.sprite, tiles_group, False) and self.max_jump:
+            self.sprite.rect.y += self.dy
+            self.sprite.update(self.sprite.rect.x, self.sprite.rect.y)
 
     def image_update(self):
         if self.direction == 1:
             all_sprites.remove(self.sprite)
-            self.sprite = AnimatedSprite(self.img_norm, 9, 1, self.x, self.y, all_sprites)
+            self.sprite = AnimatedSprite(self.img_norm, 9, 1, self.sprite.rect.x, self.sprite.rect.y, all_sprites)
         elif self.direction == 3:
             all_sprites.remove(self.sprite)
-            self.sprite = AnimatedSprite(self.img_flip, 9, 1, self.x, self.y, all_sprites)
+            self.sprite = AnimatedSprite(self.img_flip, 9, 1, self.sprite.rect.x, self.sprite.rect.y, all_sprites)
 
     def collide_x(self):
         self.sprite.rect.y -= self.dy
