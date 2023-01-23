@@ -5,6 +5,8 @@ import math
 from load_image import load_image
 from animation import AnimatedSprite
 
+player_life = 100
+player_damage = 20
 FPS = 10
 clock = pygame.time.Clock()
 size = width, height = 800, 600
@@ -110,10 +112,9 @@ class Player:
         self.count_fire = 0
         self.old_x = 400
         self.old_y = self.y
-        self.life = 100
-        self.damage = 20
+        self.life = player_life
+        self.damage = player_damage
         self.die = False
-        self.defense = 20
 
     def move(self, direction=1, fire=0, jump=0):
         if self.life > 0:
@@ -374,7 +375,6 @@ class Player:
             Bullet(x + dx, self.y + dy)
 
     def press_key(self):
-        mouse_pos = pygame.mouse.get_pos()
         mouse_buttons = pygame.mouse.get_pressed()
         keys = pygame.key.get_pressed()
         if keys[pygame.K_d]:

@@ -1,14 +1,19 @@
 import pygame
 from random import randrange, choice
 import math
-from player import all_sprites, tile_width, level_y, level_x, load_image, tiles_group, shooter, camera
+from player import all_sprites, tile_width, level_y, level_x, tiles_group, shooter
 from animation import AnimatedSprite
+from load_image import load_image
 
+number = 0
+robot_life = 150
+robot_damage = 1
 robot_bullets = pygame.sprite.Group()
 robot_group = []
 
 
 def robot():
+    global number
     robot = Robot(randrange(0, (level_x - 1) * tile_width, 5), randrange(0, (level_y + 1) * tile_width, 5))
     while True:
         if pygame.sprite.spritecollide(robot, tiles_group, False) and \
@@ -18,6 +23,7 @@ def robot():
         else:
             robot_group.append(robot)
             break
+    number += 1
 
 
 class Robot:
@@ -28,15 +34,15 @@ class Robot:
         self.img_flip = pygame.transform.flip(load_image('robot/robot_walk_flip.png'), True, False)
         self.sprite = AnimatedSprite(self.img_norm, 9, 1, self.x, self.y, all_sprites)
         self.rect = self.sprite.image.get_rect().move(self.x, self.y)
-        self.life = 250
-        self.damage = 15
-        self.defense = 8
+        self.life = robot_life
+        self.damage = robot_damage
         self.dy = 5
         self.dx = 5
         self.direction = 1
         self.jump_y = self.y
         self.max_jump = True
         self.bullet_speed = 0
+        self.number = number
 
     def move(self):
         if shooter.x < 400:
@@ -56,8 +62,8 @@ class Robot:
                     direction = 3
                 else:
                     direction = self.direction
-                if self.bullet_speed == 3:
-                    Bullet(shooter.x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                if self.bullet_speed == 5:
+                    Robot_Bullet(shooter.x + 25, shooter.y + 27, self.sprite.rect.x + 25, self.sprite.rect.y + 25)
                     self.bullet_speed = 0
                 else:
                     self.bullet_speed += 1
@@ -68,8 +74,8 @@ class Robot:
                     direction = 3
                 else:
                     direction = self.direction
-                if self.bullet_speed == 3:
-                    Bullet(shooter.old_x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                if self.bullet_speed == 5:
+                    Robot_Bullet(shooter.old_x + 25, shooter.y + 27, self.sprite.rect.x + 25, self.sprite.rect.y + 25)
                     self.bullet_speed = 0
                 else:
                     self.bullet_speed += 1
@@ -81,8 +87,8 @@ class Robot:
                     direction = 3
                 else:
                     direction = self.direction
-                if self.bullet_speed == 3:
-                    Bullet(x, shooter.y, self.sprite.rect.x, self.sprite.rect.y)
+                if self.bullet_speed == 5:
+                    Robot_Bullet(x + 25, shooter.y + 27, self.sprite.rect.x + 25, self.sprite.rect.y + 25)
                     self.bullet_speed = 0
                 else:
                     self.bullet_speed += 1
@@ -130,7 +136,7 @@ class Robot:
         self.move()
 
 
-class Bullet(pygame.sprite.Sprite):
+class Robot_Bullet(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
         super().__init__(robot_bullets)
         distance_x = x1 - x2
