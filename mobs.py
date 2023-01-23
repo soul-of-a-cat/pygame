@@ -15,6 +15,7 @@ robot_group = []
 
 def robot():
     global number
+    print(level_x)
     robot = Robot(randrange(0, (level_x - 1) * tile_width, 5), randrange(0, (level_y + 1) * tile_width, 5))
     while True:
         if pygame.sprite.spritecollide(robot, tiles_group, False) and \
