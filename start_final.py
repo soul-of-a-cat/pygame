@@ -1,6 +1,7 @@
 import sys
 import pygame
-from player import load_image, width, height, screen, clock, FPS
+from player import load_image, width, height, screen, clock, FPS, player_life, player_damage, player_repair
+from mobs import robot_die
 
 
 def terminate():
@@ -10,7 +11,7 @@ def terminate():
 
 def start_screen():
     intro_text = ['                                                Управление:',
-                  '         a - влево, d - вправо, ctrl - присесть, space - прыжок, лкм - выстрел']
+                  '        a - влево, d - вправо, ctrl - присесть, space - прыжок, лкм - выстрел']
     fon = pygame.transform.scale(load_image('screen.png'), (width, height))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
@@ -44,14 +45,22 @@ def start_screen():
 
 
 def final_screen():
+    intro_text = ['                                                Вы умерли!',
+                  f'        Вы убили роботов: {robot_die}',
+                  f'        Ваши максимальные показатели: здоровье - {player_life}, урон - {player_damage},',
+                  f'        восстановление - {player_repair}']
     fon = pygame.transform.scale(load_image('screen.png'), (width, height))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
-    string_rendered = font.render('Вы умерли!', 1, pygame.Color('red'))
-    intro_rect = string_rendered.get_rect()
-    intro_rect.top = 300
-    intro_rect.left = 270
-    screen.blit(string_rendered, intro_rect)
+    text_coord = 300
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('red'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
 
     while True:
         for event in pygame.event.get():

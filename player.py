@@ -7,6 +7,7 @@ from animation import AnimatedSprite
 
 player_life = 100
 player_damage = 20
+player_repair = 1
 FPS = 10
 clock = pygame.time.Clock()
 size = width, height = 800, 600
