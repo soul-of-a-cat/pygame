@@ -1,6 +1,6 @@
 import sys
 import pygame
-from player import load_image, width, height, screen, clock, FPS, player_life, player_damage, player_repair
+from player import load_image, width, height, clock, FPS, player_life, player_damage, player_repair, screen
 from mobs import robot_die
 
 

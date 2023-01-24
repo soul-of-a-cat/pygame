@@ -6,6 +6,7 @@ from random import choice
 from load_image import load_image
 from animation import AnimatedSprite
 
+tile_width = tile_height = 25
 player_life = 100
 player_damage = 20
 player_repair = 1
@@ -16,8 +17,14 @@ all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
+pygame.init()
+pygame.display.set_caption('Bloody snow')
+screen = pygame.display.set_mode(size)
 maps = ['maps\map1.txt', 'maps\map2.txt', 'maps\map3.txt']
-
+tile_images = {
+    'land1': load_image('part_level\land1.png'),
+    'land2': load_image('part_level\land2.png')
+}
 
 
 def load_level(filename):
@@ -49,11 +56,8 @@ def generate_level(level):
 
 def new_level():
     global lev_map, shooter, level_x, level_y
-    print(1)
     lev_map = load_level(choice(maps))
     shooter, level_x, level_y = generate_level(lev_map)
-    print(level_x)
-    return lev_map, shooter, level_x, level_y
 
 
 class Tile(pygame.sprite.Sprite):
@@ -419,13 +423,7 @@ class Player:
         self.press_key()
 
 
-pygame.init()
-pygame.display.set_caption('Bloody snow')
-screen = pygame.display.set_mode(size)
-lev_map, shooter, level_x, level_y = new_level()
-tile_images = {
-    'land1': load_image('part_level\land1.png'),
-    'land2': load_image('part_level\land2.png')
-}
-tile_width = tile_height = 25
+lev_map = load_level(choice(maps))
+shooter, level_x, level_y = generate_level(lev_map)
 camera = Camera()
+
